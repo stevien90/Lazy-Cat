@@ -1,17 +1,22 @@
 import pandas as pd
 import tkinter as tk
+from tkinter import ttk
 from api import cohere_API
 import webbrowser
 
 def load_and_display_jobs(parent_frame):
+    # Apply Vista theme
+    style = ttk.Style()
+    style.theme_use('vista')
+
     # Clear existing widgets
     for widget in parent_frame.winfo_children():
         widget.destroy()
 
     # --- Scrollable canvas setup ---
     canvas = tk.Canvas(parent_frame)
-    scrollbar = tk.Scrollbar(parent_frame, orient="vertical", command=canvas.yview)
-    scroll_frame = tk.Frame(canvas)
+    scrollbar = ttk.Scrollbar(parent_frame, orient="vertical", command=canvas.yview)
+    scroll_frame = ttk.Frame(canvas)
 
     scroll_frame.bind(
         "<Configure>",
@@ -30,13 +35,12 @@ def load_and_display_jobs(parent_frame):
     try:
         df = pd.read_excel('JobsAppliedFor/jobs_applied.xlsx')
     except FileNotFoundError:
-        tk.Label(scroll_frame, text="No job data found. Please apply for jobs first.", font=('Arial', 12), fg="red").pack(pady=10)
+        ttk.Label(scroll_frame, text="No job data found. Please apply for jobs first.", font=('Arial', 12), foreground="red").pack(pady=10)
         return
     
     if df.empty:
-        tk.Label(scroll_frame, text="Job List is empty", font=('Arial', 12), fg="red").pack(pady=10)
+        ttk.Label(scroll_frame, text="Job List is empty", font=('Arial', 12), foreground="red").pack(pady=10)
         return 
-
 
     # --- Show job list buttons ---
     def change_status(row_index, status, job_button):
@@ -45,11 +49,10 @@ def load_and_display_jobs(parent_frame):
 
         # Change button background based on status
         if status == "Interviewed":
-            job_button.config(bg="green")
+            job_button.config(background="green")
         elif status == "No Call Back":
-            job_button.config(bg="red")
+            job_button.config(background="red")
 
-     # --- Show job list buttons ---
     for idx, row in df.iterrows():
         title = row.get("Job_Title", f"Job {idx + 1}")
         company = row.get("Company", "Unknown Company")
@@ -63,8 +66,8 @@ def load_and_display_jobs(parent_frame):
         elif status == "No Call Back":
             bg_color = "red"
 
-        # Create main job button with color
-        row_frame = tk.Frame(scroll_frame)
+        # Create main job row
+        row_frame = ttk.Frame(scroll_frame)
         row_frame.pack(fill="x", pady=4, padx=10)
 
         job_button = tk.Button(
@@ -98,25 +101,23 @@ def load_and_display_jobs(parent_frame):
         )
         red_button.pack(side="left", padx=2)
 
-
     # --- Function to show job details ---
     def show_job_detail(row):
         for widget in scroll_frame.winfo_children():
             widget.destroy()
 
         def call_api_and_show_details(value):
-            #Construct a prompt for the API
             prompt = f"Tell me more about: {value} in 200 words or less"
             try:
                 response = cohere_API.get_cohere_response(prompt)
             except Exception as e:
                 response = f"Error fetching details: {str(e)}"
-            ai_response_window_popup = tk.Toplevel()
-            ai_response_window_popup.title(f"{value}")
-            ai_response_window_popup.geometry("600x400")
+            popup = tk.Toplevel()
+            popup.title(f"{value}")
+            popup.geometry("600x400")
 
-            tk.Label(ai_response_window_popup, text=f"{value}:", font=("Arial", 12, "bold")).pack(pady=10)
-            text_box=tk.Text(ai_response_window_popup, wrap="word", font=("Arial", 10))
+            ttk.Label(popup, text=f"{value}:", font=("Arial", 12, "bold")).pack(pady=10)
+            text_box = tk.Text(popup, wrap="word", font=("Arial", 10))
             text_box.insert("1.0", response)
             text_box.configure(state="disabled")
             text_box.pack(expand=True, fill="both", padx=10, pady=10)
@@ -127,10 +128,8 @@ def load_and_display_jobs(parent_frame):
             elif isinstance(value, float) and pd.isna(value):
                 value = "(not provided)"
 
-            # Field title
-            tk.Label(scroll_frame, text=f"{field}:", font=("Arial", 10, "bold"), anchor="w").pack(anchor="w", padx=10, pady=(10, 0))
+            ttk.Label(scroll_frame, text=f"{field}:", font=("Arial", 10, "bold")).pack(anchor="w", padx=10, pady=(10, 0))
 
-            # Special Case: Job Title and Company as clickable ai search
             if field == "Job_Title" or field == "Company":
                 clickable_label = tk.Label(
                     scroll_frame,
@@ -144,8 +143,8 @@ def load_and_display_jobs(parent_frame):
                 )
                 clickable_label.pack(anchor="w", padx=20)
                 clickable_label.bind("<Button-1>", lambda e, v=value: call_api_and_show_details(v))
-            # Special Case: Website as clickable link
-            elif field.lower() =="website" and value.startswith("http"):
+
+            elif field.lower() == "website" and value.startswith("http"):
                 website_label = tk.Label(
                     scroll_frame,
                     text=value,
@@ -158,7 +157,7 @@ def load_and_display_jobs(parent_frame):
                 )
                 website_label.pack(anchor="w", padx=20)
                 website_label.bind("<Button-1>", lambda e, url=value: webbrowser.open_new(url))
-            # Special Case: Search skills with AI on click
+
             elif field == "Skills":
                 skills = [skill.strip() for skill in value.split(";") if skill.strip()]
                 for skill in skills:
@@ -182,8 +181,6 @@ def load_and_display_jobs(parent_frame):
                     justify="left",
                     anchor="w"
                 ).pack(anchor="w", padx=20)
-            
-            
 
         # Back button
-        tk.Button(scroll_frame, text="⬅ Back to Job List", command=lambda: load_and_display_jobs(parent_frame)).pack(pady=20)
+        ttk.Button(scroll_frame, text="⬅ Back to Job List", command=lambda: load_and_display_jobs(parent_frame)).pack(pady=20)
